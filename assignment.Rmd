@@ -136,9 +136,14 @@ cornyields <- tibble(cornyields)
 
 ```
 
+<span style="color:blue">
 ## Assignment
+</span>
 
-### Question 1a: Extract Winneshiek County corn yields, fit a linear time trend, make a plot. Is there a significant time trend?
+### Question 1a: Extract Winneshiek County corn yields, fit a linear time trend, make a plot. Is there a significant time trend?  
+<span style="color:blue">
+**A: As seen the graph below, we can say the trend of corn yield in Winneshiek County has been increasing over time.**</span>  
+
 ```{r, message=FALSE}
 
 winncorn <- cornyields %>% 
@@ -150,11 +155,13 @@ ggplot(winncorn, mapping = aes(x= year, y= yield)) +
   labs(x='Year', y='Corn yield [bu/ac]') +
   geom_smooth(method = lm , color='red')
 
-
 ```
 
 
 ### Question 1b: Fit a quadratic time trend (i.e., year + year^2) and make a plot. Is there evidence for slowing yield growth? 
+<span style="color:blue">
+**A: The plot line with quadratic time trend applied is seemed to have no evidence for slowing yield growth instead it shows a similar trend to the previous graph.**</span>
+
 ```{r}
 winncorn$yearsq <- (winncorn$year)^2
 
@@ -173,8 +180,10 @@ ggplot(winncorn) +
 
 
 ### Question 2 -- Time Series: Let's analyze the relationship between temperature and yields for the Winneshiek County time series. Use data on yield and summer avg Tmax. Is adding year or Tmax^2 to your model helpful? Make a plot and interpret the results.
+<span style="color:blue">
+**A: The relationship between temperature and yield in the winneshiek time series shows a generally negative trend as shown in the figures below. In particular, linear regression models with "Tmax squared" as a predictor give a very distinct quadratic equation result. So we will be able to predict accurate corn yields using this model.** </span>
 
-```{r}
+```{r, message=FALSE}
 
 winncorn_tmax <- inner_join(winncorn, winnesummer, by= 'year') %>% 
                  select(county_name, year, yield, meantmax)
@@ -222,44 +231,44 @@ ggplot(winncorn_tmax, mapping = aes(x=meantmax, y=fitted_tmaxsq, color=year)) +
 ```
 
 
-
 ### Question 3 -- Cross-Section: Analyze the relationship between temperature and yield across all counties in 2018. Is there a relationship? Interpret the results.
-```{r}
+<span style="color:blue">
+**A: Based on the result of regression analysis, the p-value is less than alpha(=0.05), so we can determine that there is a relationship between temperature and yield, and the relationship is positive trend as you can see the below figure.** </span>
+
+```{r, message=FALSE}
 
 #Extract temperature data across all counties in 1981
 tmaxdf_1981 <- tmaxdf %>% 
   filter(year==1981 & day >= 152 & day <=243 & !is.na(tmax)) %>% 
   group_by(countyfp) %>% 
   summarise(meantmax = mean(tmax))
-tmaxdf_1981$countyfp <- as.character(tmaxdf_1981$countyfp)
+tmaxdf_1981$countyfp <- as.numeric(tmaxdf_1981$countyfp)
 
 #Extract yield data across all counties in 1981, and Change column name to join two dataset
 cornyields_1981 <- cornyields %>% 
   filter(year==1981, !is.na(yield))
-
 colnames(cornyields_1981)[1] <- "countyfp"
-cornyields_1981$countyfp <- as.character(cornyields_1981$countyfp)
 
 #Join two dataset  
 Tmax_yield_all <- inner_join(tmaxdf_1981, cornyields_1981, by="countyfp")
 
-ggplot(Tmax_yield_all) +
-  geom_point(mapping = aes(x=meantmax, y=yield)) +
-  theme_bw()
+ggplot(Tmax_yield_all, mapping = aes(x=meantmax, y=yield)) +
+  geom_point() +
+  theme_bw() +
+  labs(x='Tmax (°C)', y='Corn yield [bu/ac]', title='Relation between temperature and yield in 2018')+
+  geom_smooth(method=lm)
 
+#Analyze regression
 LMFit <- lm(yield ~ meantmax, data=Tmax_yield_all)
 summary(LMFit)
-
-par(mfrow=c(1,2))
-plot(yield~meantmax, data=Tmax_yield_all)
-abline(coef(LMFit))
-plot(LMFit, which=1)
 
 ```
 
 ### Question 4 -- Panel: One way to leverage multiple time series is to group all data into what is called a "panel" regression. Convert the county ID code ("countyfp" or "county_ansi") into factor using as.factor, then include this variable in a regression using all counties' yield and summer temperature data. How does the significance of your temperature coefficients (Tmax, Tmax^2) change? Make a plot comparing actual and fitted yields and interpret the results of your model.
+<span style="color:blue">
+**A: The result of analysis between temperature and yield for all counties of Iowa during 1981~2020 shows a slow negative correlation, blue dashed line, contrary to the one of Question #3. And it shows that there is no significant difference in yield result due to temperature coefficients change(Tmax, Tmaxsq).** </span>
 
-```{r}
+```{r, message=FALSE}
 #Extract temperature data across all counties 
 tmaxdf_years <- tmaxdf %>% 
   filter(day >= 152 & day <=243 & !is.na(tmax)) %>% 
@@ -277,94 +286,109 @@ cornyields_years$countyfp <- as.factor(cornyields_years$countyfp)
 #Join two dataset  
 Tmax_yield_all_years <- inner_join(tmaxdf_years, cornyields_years, by="countyfp")
 
+#Regression analysis and plot -Tmax
 LMFit2 <- lm(yield ~ meantmax + countyfp, data=Tmax_yield_all_years)
 summary(LMFit2)
 
 Tmax_yield_all_years$fitted <- LMFit2$fitted.values
 
-
-ggplot(Tmax_yield_all_years) +
-  geom_point(mapping = aes(x=meantmax, y=yield)) +
+ggplot(Tmax_yield_all_years, mapping = aes(x=meantmax, y=yield)) +
+  geom_point() +
   geom_line (mapping = aes(x=meantmax, y=fitted), col='red') +
-  theme_bw()
+  theme_bw() +
+  labs(x='Tmax (°C)', y='Corn yield [bu/ac]',
+       title='Relation between temperature and yield(Tmax)')+
+  geom_smooth(method=lm, color='blue', lty='dashed')
 
-
-#tmax squared
+#Regression analysis and plot -Tmax squared
 Tmax_yield_all_years$tmaxsq <- (Tmax_yield_all_years$meantmax)^2
 LMFit3 <- lm(yield ~ meantmax + tmaxsq + countyfp , data=Tmax_yield_all_years)
 summary(LMFit3)
 Tmax_yield_all_years$fitted2 <- LMFit3$fitted.values
 
-ggplot(Tmax_yield_all_years) +
-  geom_point(mapping = aes(x=meantmax, y=yield)) +
+ggplot(Tmax_yield_all_years, mapping = aes(x=meantmax, y=yield)) +
+  geom_point() +
   geom_line (mapping = aes(x=meantmax, y=fitted2), col='red') +
-  theme_bw()
+  theme_bw() +
+  labs(x='Tmax (°C)', y='Corn yield [bu/ac]',
+       title='Relation between temperature and yield(Tmax+Tmaxsq)')+
+  geom_smooth(method=lm, color='blue', lty='dashed')
 
 
 ```
 
 
-### Question 5 -- Soybeans: Download NASS data on soybean yields and explore either a time series relationship for a given county, the cross-sectional relationship for a given year, or a panel across all counties and years.
+### Question 5 -- Soybeans: Download NASS data on soybean yields and explore either a time series relationship for a given county, the cross-sectional relationship for a given year, or a panel across all counties and years.  
+<span style="color:blue">
+**A: We can find the correlation under various conditions through the below figures.** </span>
+
 ```{r, results='hide'}
 
-# parameters to query on 
+#Parameters to query on for soybean data
 params2 <- list(commodity_desc = "SOYBEANs", statisticcat_desc="YIELD", 
                 prodn_practice_desc = "ALL PRODUCTION PRACTICES", year__GE = 1981, state_alpha = "IA")
 
-# download
+
+params <- list(commodity_desc = "CORN", util_practice_desc = "GRAIN", prodn_practice_desc = "ALL PRODUCTION PRACTICES", year__GE = 1981, state_alpha = "IA")
+
+#Download
 soybeansyieldsall <- nassqs_yields(params2)
 
-```
+``` 
 
 ```{r, coding continued, message=FALSE}
-
+#Tidying up the data
 soybeansyieldsall$county_ansi <- as.numeric(soybeansyieldsall$county_ansi)
 soybeansyieldsall$yield <- as.numeric(soybeansyieldsall$Value)
 
-soybeanyields <- select(soybeansyieldsall, county_ansi, county_name, yield, year) %>%
+soybean_yields <- select(soybeansyieldsall, county_ansi, county_name, yield, year) %>%
   filter(!is.na(county_ansi) & !is.na(yield))
          
-soybeanyields <- tibble(soybeanyields)
+soybean_yields <- tibble(soybean_yields)
 
-# relationship for a given county
-winnsoybean <- soybeanyields %>% 
+#Relationship for a given county(winneshiek)
+winnsoybean <- soybean_yields %>% 
   filter(county_ansi==191)
 
 ggplot(winnsoybean, mapping=aes(x=year, y=yield)) +
   geom_point() +
   theme_bw() +
-  labs(x="Year", y="Soybeans Yield") +
+  labs(x="Year", y="Soybeans Yield [bu/ac]", title="Soybean Yields in Winneshiek County by year") +
   geom_smooth(method = lm)
 
-# the cross-sectional relationship for a given year(1990)
-soybeans_1990 <- soybeanyields %>% 
+#The cross-sectional relationship for a given year(1990)
+soybeans_1990 <- soybean_yields %>% 
   filter(year==1990)
 
 ggplot(soybeans_1990, mapping=aes(x=county_ansi, y=yield), color=county_ansi) +
   geom_point() +
   theme_bw() +
-  labs(x="County ANSI", y="Soybeans Yield") +
+  labs(x="County ANSI", y="Soybeans Yield [bu/ac]", 
+       title="Soybean Yield by county across Iowa state in 1990") +
   geom_smooth(method = lm)
 
-# panel 
-LMFit4 <- lm(yield ~ year + as.factor(county_ansi), data=soybeanyields)
+#Panel across all counties and years
+LMFit4 <- lm(yield ~ year + as.factor(county_ansi), data=soybean_yields)
 summary(LMFit4)
 
-soybeanyields$fitted <- LMFit4$fitted.values
+soybean_yields$fitted <- LMFit4$fitted.values
 
-ggplot(soybeanyields) +
-  geom_point(mapping = aes(x=year, y=yield)) +
+ggplot(soybean_yields, mapping = aes(x=year, y=yield)) +
+  geom_point() +
   geom_line (mapping = aes(x=year, y=fitted), col='red') +
   theme_bw() +
-  labs(x="Year", y="Soybeans Yield")
+  labs(x="Year", y="Soybeans Yield [bu/ac]",
+       title='Relation between Year and Soybean Yields in Winneshiek County')+
+  geom_smooth(method=lm, color='blue', lty='dashed')
 
 ```
 
 
-
 ### Bonus: Find a package to make a county map of Iowa displaying some sort of information about yields or weather. Interpret your map.
+<span style="color:blue">
+**A: I used the "tidyverse" package to plot 1990 soybean yields on a map of counties in Iowa. As you can see, the southern regions of the state show low yields, while the eastern regions, such as Cedar, Clinton, and Jones counties, inferred through the "county_ansi" code, show high yields.** </span>
+
 ```{r}
-library(tidyverse)
 
 us_counties <- map_data("county")
 
@@ -378,12 +402,15 @@ soybeans_1990$county_name <- tolower(soybeans_1990$county_name)
 
 soybeans_1990_Iowa <- Iowa_counties %>% 
                       left_join(soybeans_1990, by=c("subregion"="county_name"))
-head(soybeans_1990_Iowa)
+# head(soybeans_1990_Iowa)
 
 #ggplot map
-ggplot(soybeans_1990_Iowa, mapping = aes(x=long, y=lat, group=group, fill=yield)) +
-  geom_polygon(color="gray90", size=0.1) +
-  scale_fill_continuous(type='viridis') +
+ggplot(soybeans_1990_Iowa) +
+  geom_polygon(mapping = aes(x=long, y=lat, group=group, fill=yield), 
+               color="gray90", size=0.1) +
+  scale_fill_continuous(type = 'viridis', direction=-1) +
+  geom_text(aes(x=long, y=lat, label=county_ansi), 
+            color="gray20", check_overlap = T, size=3) +
   theme(legend.position = 'right',
         axis.line = element_blank(),
         axis.text = element_blank(),
@@ -392,12 +419,15 @@ ggplot(soybeans_1990_Iowa, mapping = aes(x=long, y=lat, group=group, fill=yield)
         panel.background = element_blank(),
         panel.border = element_blank(),
         panel.grid = element_blank()) +
-  ggtitle("Soybean yields by counties of IOWA in 1990" )
+  ggtitle("Soybean Yields by county of IOWA state in 1990" )
 
 ```
 
 
 ### Bonus #2: Challenge question - map trends in corn yields by county across Iowa. Interpret your map.
+<span style="color:blue">
+**A: Several five-year cycle maps were obtained of corn yields by county across Iowa, as shown below. Data for some counties have been omitted, but overall, we can see a trend toward higher yields across the state over time. **
+
 ```{r}
 
 
@@ -410,7 +440,7 @@ cornyields_Iowa <- Iowa_counties %>%
 ggplot(data=subset(cornyields_Iowa, year %in% c(1981, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020)),
        mapping = aes(x=long, y=lat, group=group, fill=yield)) +
        geom_polygon(color="gray90", size=0.1) +
-       scale_fill_continuous(type='viridis') +
+       scale_fill_continuous(type='viridis', direction=-1 ) +
        theme(legend.position = 'right',
         axis.line = element_blank(),
         axis.text = element_blank(),
