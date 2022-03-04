@@ -160,9 +160,9 @@ ggplot(winncorn, mapping = aes(x= year, y= yield)) +
 
 ### Question 1b: Fit a quadratic time trend (i.e., year + year^2) and make a plot. Is there evidence for slowing yield growth? 
 <span style="color:blue">
-**A: The plot line with quadratic time trend applied is seemed to have no evidence for slowing yield growth instead it shows a similar trend to the previous graph.**</span>
+**A: The plot line (blue) with quadratic time trend applied is seemed to have no evidence for slowing yield growth. Instead it shows a similar trend to the previous actual yield graph because the regression plot line is same with reference line(red). **</span>
 
-```{r}
+```{r, message=FALSE}
 winncorn$yearsq <- (winncorn$year)^2
 
 lm_winncornquad <- lm(yield ~ year + yearsq, winncorn)
@@ -170,11 +170,13 @@ summary(lm_winncornquad)
 
 winncorn$fitted <- lm_winncornquad$fitted.values
 
-ggplot(winncorn) +
-  geom_point(mapping = aes(x = year, y = yield)) +
-  geom_line(mapping = aes(x = year, y = fitted), color='red') +
+ggplot(winncorn, mapping = aes(x = fitted, y = yield)) +
+  geom_point() +
+  geom_smooth(method=lm) +
+  geom_abline(intercept = 0, slope = 1, color='red', lty='dashed') +
   theme_bw() +
-  labs(x = "Year", y = "Corn yield [bu/ac]")
+  labs(x = "Fitted Yield", y = "Actual Yield")
+
 
 ```
 
@@ -266,7 +268,7 @@ summary(LMFit)
 
 ### Question 4 -- Panel: One way to leverage multiple time series is to group all data into what is called a "panel" regression. Convert the county ID code ("countyfp" or "county_ansi") into factor using as.factor, then include this variable in a regression using all counties' yield and summer temperature data. How does the significance of your temperature coefficients (Tmax, Tmax^2) change? Make a plot comparing actual and fitted yields and interpret the results of your model.
 <span style="color:blue">
-**A: The result of analysis between temperature and yield for all counties of Iowa during 1981~2020 shows a slow negative correlation, blue dashed line, contrary to the one of Question #3. And it shows that there is no significant difference in yield result due to temperature coefficients change(Tmax, Tmaxsq).** </span>
+**A: The result of comparing actual and fitted yields is almost same to reference line(red, y=x). So to say, we would probably able to infer predicted corn yield close to actual yields through this panel regression model. And there is no significant difference in the result due to temperature coefficients change(Tmax, Tmaxsq).** </span>
 
 ```{r, message=FALSE}
 #Extract temperature data across all counties 
@@ -288,32 +290,31 @@ Tmax_yield_all_years <- inner_join(tmaxdf_years, cornyields_years, by="countyfp"
 
 #Regression analysis and plot -Tmax
 LMFit2 <- lm(yield ~ meantmax + countyfp, data=Tmax_yield_all_years)
-summary(LMFit2)
+#summary(LMFit2)
 
 Tmax_yield_all_years$fitted <- LMFit2$fitted.values
 
-ggplot(Tmax_yield_all_years, mapping = aes(x=meantmax, y=yield)) +
+ggplot(Tmax_yield_all_years, mapping = aes(x=fitted, y=yield)) +
   geom_point() +
-  geom_line (mapping = aes(x=meantmax, y=fitted), col='red') +
+  geom_smooth (method = lm) +
+  geom_abline(intercept = 0, slope = 1, color='red', lty='dashed') +
   theme_bw() +
-  labs(x='Tmax (°C)', y='Corn yield [bu/ac]',
-       title='Relation between temperature and yield(Tmax)')+
-  geom_smooth(method=lm, color='blue', lty='dashed')
+  labs(x='Fitted Yield', y='Actual Yield',
+       title='Compareing Actual and Fitted Yields in panel regression (Tmax)')
 
 #Regression analysis and plot -Tmax squared
 Tmax_yield_all_years$tmaxsq <- (Tmax_yield_all_years$meantmax)^2
 LMFit3 <- lm(yield ~ meantmax + tmaxsq + countyfp , data=Tmax_yield_all_years)
-summary(LMFit3)
+#summary(LMFit3)
 Tmax_yield_all_years$fitted2 <- LMFit3$fitted.values
 
-ggplot(Tmax_yield_all_years, mapping = aes(x=meantmax, y=yield)) +
+ggplot(Tmax_yield_all_years, mapping = aes(x=fitted2, y=yield)) +
   geom_point() +
-  geom_line (mapping = aes(x=meantmax, y=fitted2), col='red') +
+  geom_smooth(method = lm) +
+  geom_abline (intercept = 0, slope = 1, col='red', lty='dashed') +
   theme_bw() +
-  labs(x='Tmax (°C)', y='Corn yield [bu/ac]',
-       title='Relation between temperature and yield(Tmax+Tmaxsq)')+
-  geom_smooth(method=lm, color='blue', lty='dashed')
-
+  labs(x='Fitted Yield', y='Actual Yield',
+       title='Compareing Actual and Fitted Yields in panel regression (Tmax+Tmaxsq)')
 
 ```
 
@@ -346,7 +347,7 @@ soybean_yields <- select(soybeansyieldsall, county_ansi, county_name, yield, yea
          
 soybean_yields <- tibble(soybean_yields)
 
-#Relationship for a given county(winneshiek)
+#A time series relationship for a given county(winneshiek)
 winnsoybean <- soybean_yields %>% 
   filter(county_ansi==191)
 
@@ -369,17 +370,17 @@ ggplot(soybeans_1990, mapping=aes(x=county_ansi, y=yield), color=county_ansi) +
 
 #Panel across all counties and years
 LMFit4 <- lm(yield ~ year + as.factor(county_ansi), data=soybean_yields)
-summary(LMFit4)
+#summary(LMFit4)
 
 soybean_yields$fitted <- LMFit4$fitted.values
 
-ggplot(soybean_yields, mapping = aes(x=year, y=yield)) +
+ggplot(soybean_yields, mapping = aes(x=fitted, y=yield)) +
   geom_point() +
-  geom_line (mapping = aes(x=year, y=fitted), col='red') +
+  geom_smooth(method = lm) +
+  geom_abline (intercept = 0, slope = 1, col='red', lty='dashed') +
   theme_bw() +
-  labs(x="Year", y="Soybeans Yield [bu/ac]",
-       title='Relation between Year and Soybean Yields in Winneshiek County')+
-  geom_smooth(method=lm, color='blue', lty='dashed')
+  labs(x='Fitted Yield [bu/ac]', y='Actual Yield [bu/ac]',
+       title='Compareing Actual and Fitted Soybean Yields in winneshiek County')
 
 ```
 
